@@ -1,0 +1,3 @@
+cli-shared/source/main.cpp
+p2p/source/socket.hpp
+p2p/source/sync.hpp
