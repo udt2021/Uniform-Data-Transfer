@@ -1,0 +1,2 @@
+# Uniform-Data-Transfer
+UDT (Uniform Data Transfer) is a UDT public chain digital asset independently developed by the Singapore Travel Chain Foundation. It is an infrastructure that provides blockchain payment. Developers can develop distributed applications based on the main network of Travel Chain. Through smart contracts, the reality of providing Internet payment data is convenient to map the actual business applications to the blockchain chain.
