@@ -1,0 +1,98 @@
+cli-shared/source/main.cpp
+ const auto local(Host_);
+    const auto capture(Break<BufferSink<Capture>>(local));
+
+    Tunnel(*capture, [&](const std::string &device, const std::string &argument) {
+    Tunnel(*capture, "", [&](const std::string &device, const std::string &argument) {
+        orc_assert(system(("ifconfig " + device + " inet " + local.String() + " " + local.String() + " mtu 1100 up").c_str()) == 0);
+
+        if (args.count("capture") != 0)
+
+p2p/source/socket.hpp
+ Socket(const sockaddr_in6 &socket) :
+        Socket(socket.sin6_addr, boost::endian::big_to_native(socket.sin6_port))
+    {
+    }
+
+    Socket(const sockaddr_in &socket) :
+        Socket(socket.sin_addr, boost::endian::big_to_native(socket.sin_port))
+    {
+    }
+
+    Socket(const sockaddr &socket) :
+        Socket([&]() -> Socket { switch (socket.sa_family) {
+            case AF_INET6:
+                return reinterpret_cast<const sockaddr_in6 &>(socket);
+            case AF_INET:
+                return reinterpret_cast<const sockaddr_in &>(socket);
+            default:
+                orc_assert_(false, "unsupported address family #" << socket.sa_family);
+        } }())
+    {
+    }
+p2p/source/sync.hpp
+template <typename Sync_>
+class SyncConnection :
+    public Sync
+{
+  protected:
+    Sync_ sync_;
+
+    size_t Read_(Beam &beam) override {
+        return sync_.receive(asio::buffer(beam.data(), beam.size()));
+    }
+
+    size_t Send_(const Buffer &data) override {
+        return sync_.send(Sequence(data));
+    }
+
+  public:
+    template <typename... Args_>
+    SyncConnection(BufferDrain &drain, Args_ &&...args) :
+        Sync(drain),
+        sync_(std::forward<Args_>(args)...)
+    {
+    }
+
+    Sync_ *operator ->() {
+        return &sync_;
+    }
+
+    task<void> Shut() noexcept override {
+        orc_except({ sync_.close(); })
+        co_await Link::Shut();
+    }
+};
+
+template <typename Sync_>
+class SyncFile :
+    public Sync
+{
+  protected:
+    Sync_ sync_;
+
+    size_t Read_(Beam &beam) override {
+        return sync_.read_some(asio::buffer(beam.data(), beam.size()));
+    }
+
+    size_t Send_(const Buffer &data) override {
+        return sync_.write_some(Sequence(data));
+    }
+
+  public:
+    template <typename... Args_>
+    SyncFile(BufferDrain &drain, Args_ &&...args) :
+        Sync(drain),
+        sync_(std::forward<Args_>(args)...)
+    {
+    }
+
+    Sync_ *operator ->() {
+        return &sync_;
+    }
+
+    task<void> Shut() noexcept override {
+        sync_.close();
+        co_await Link::Shut();
+    }
+};
